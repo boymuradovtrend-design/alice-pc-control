@@ -8,8 +8,17 @@ PC1_URL = os.environ["PC1_URL"]
 
 def send_command(target, cmd, param=""):
     payload = {"command": cmd, "target": target, "param": param}
+
+    # Обход защиты ngrok для запросов из облака Render
+    headers = {
+        "ngrok-skip-browser-warning": "true",
+        "User-Agent": "curl/7.68.0",
+    }
+
     try:
-        res = requests.post(f"{PC1_URL}/command", json=payload, timeout=5)
+        res = requests.post(
+            f"{PC1_URL}/command", json=payload, headers=headers, timeout=5
+        )
         return res.json().get("result", "Нет ответа от ПК")
     except Exception:
         return "Компьютер недоступен. Проверь ngrok и агент."
@@ -32,7 +41,7 @@ def parse_command(text):
             return send_command(target, "youtube", query)
 
     # Системные команды питания
-    if "выключи компьютер" in text or "выключи пк" in text:
+    if "выключи компьютер" in text or "выключи pк" in text:
         return send_command(target, "shutdown")
     elif "перезагрузи" in text:
         return send_command(target, "restart")
@@ -45,7 +54,6 @@ def parse_command(text):
     # Универсальное открытие (программы, папки)
     elif "открой" in text or "запусти" in text:
         item = text.replace("открой", "").replace("запусти", "").strip()
-        # Быстрый перехват, если слово "игру" было пропущено (например, "запусти кс")
         if item in ["кс", "cs", "cs2", "дота", "dota"]:
             return send_command(target, "play_game", item)
         return send_command(target, "open_item", item)
